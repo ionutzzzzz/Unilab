@@ -522,41 +522,32 @@ class UniLabBridge {
   // Find the backend path
 
   static Future<String> findBackendPath() async {
-
     try {
-
       final exe = File(Platform.resolvedExecutable);
-
-      final backendPath = p.join(exe.parent.path, '..', '..', '..', 'backend');
-
-      if (await Directory(backendPath).exists()) return backendPath;
-
+      final backendPath = p.join(exe.parent.path, '..', 'backend');
+      if (await Directory(backendPath).exists()) return p.join(exe.parent.path, '..');
     } catch (_) {}
 
-    
+    try {
+      final exe = File(Platform.resolvedExecutable);
+      final backendPath = p.join(exe.parent.path, '..', '..', '..', 'backend');
+      if (await Directory(backendPath).exists()) return p.join(exe.parent.path, '..', '..', '..');
+    } catch (_) {}
 
     final envPath = Platform.environment['UNILAB_BACKEND_PATH'];
-
     if (envPath != null && await Directory(envPath).exists()) return envPath;
 
-    
-
     final commonPaths = [
-
-      '/home/john/Documents/GitHub/UniLab/backend', 
-
-      p.join(Directory.current.path, 'backend')
-
+      '/home/john/Documents/GitHub/UniLab', 
+      Directory.current.path
     ];
 
     for (final path in commonPaths) {
-
-      if (await Directory(path).exists()) return path;
-
+      final backendDir = p.join(path, 'backend');
+      if (await Directory(backendDir).exists()) return path;
     }
 
     throw StateError('Cannot find backend directory.');
-
   }
 
 

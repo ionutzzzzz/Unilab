@@ -83,6 +83,42 @@ pub extern "C" fn unilab_init(backend_path: *const c_char) -> i32 {
 
             // 1. Add the directory containing 'backend/'
             pypath.call_method1("insert", (0, &abs_path_str))?;
+
+            // 2. Discover and add virtualenv site-packages to sys.path
+            let mut venv_paths = vec![
+                std::path::PathBuf::from("/opt/unilab/venv"),
+                abs_backend_parent.join("venv"),
+            ];
+            if let Some(parent) = abs_backend_parent.parent() {
+                venv_paths.push(parent.join("venv"));
+                if let Some(gp) = parent.parent() {
+                    if let Some(ggp) = gp.parent() {
+                        if let Some(gggp) = ggp.parent() {
+                            venv_paths.push(gggp.join("venv"));
+                        }
+                    }
+                }
+            }
+
+            for venv_path in venv_paths {
+                let venv_lib = venv_path.join("lib");
+                if venv_lib.exists() {
+                    if let Ok(entries) = std::fs::read_dir(&venv_lib) {
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            if path.is_dir() {
+                                let site_packages = path.join("site-packages");
+                                if site_packages.exists() {
+                                    if let Some(sp_str) = site_packages.to_str() {
+                                        pypath.call_method1("insert", (0, sp_str))?;
+                                        println!("[UniLab-Rust] Added site-packages to sys.path: {}", sp_str);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             
             // Debug: print sys.path
             if let Ok(path_list) = pypath.extract::<Vec<String>>() {

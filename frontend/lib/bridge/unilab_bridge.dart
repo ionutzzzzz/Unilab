@@ -344,6 +344,7 @@ class UniLabBridge {
     final exeDir = Directory(exePath).parent.path;
     
     final locations = [
+      p.dirname(exeDir), // To find /opt/unilab when exeDir is /opt/unilab/gui
       p.join(exeDir, 'backend'), 
       p.join(exeDir, 'data', 'flutter_assets', 'assets', 'backend'),
       p.join(exeDir, '..', 'Resources', 'flutter_assets', 'assets', 'backend'),

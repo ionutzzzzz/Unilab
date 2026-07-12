@@ -112,6 +112,14 @@ EOF
     "$BUILD_DIR/opt/unilab/venv/bin/pip" install --ignore-installed -r "$BUILD_DIR/requirements.txt"
     rm "$BUILD_DIR/requirements.txt"
 
+    # Patch pyvenv.cfg to point to target machine path /opt/unilab/python
+    cat <<EOF > "$BUILD_DIR/opt/unilab/venv/pyvenv.cfg"
+home = /opt/unilab/python/bin
+include-system-site-packages = false
+version = 3.12.1
+executable = /opt/unilab/python/bin/python3
+EOF
+
     ## 3.4 Fix Paths and Shebangs
     echo "🩹 Fixing virtualenv shebangs and paths..."
     find "$BUILD_DIR/opt/unilab/venv/bin" -type f -executable -exec sed -i "1s|^#!.*python.*|#!/opt/unilab/venv/bin/python3|" {} +
@@ -182,7 +190,14 @@ EOF
     cat <<EOF > "$BUILD_DIR/usr/bin/unilab"
 #!/bin/bash
 export LD_LIBRARY_PATH="/opt/unilab/python/lib:/opt/unilab/gui/lib:\$LD_LIBRARY_PATH"
-export PYTHONPATH=/opt/unilab
+
+# Add virtualenv site-packages to PYTHONPATH dynamically
+for site_pkg in /opt/unilab/venv/lib/python*/site-packages; do
+    if [ -d "\$site_pkg" ]; then
+        export PYTHONPATH="\$site_pkg:\$PYTHONPATH"
+    fi
+done
+export PYTHONPATH="/opt/unilab:\$PYTHONPATH"
 
 # Start the backend server in the background
 cd /opt/unilab/backend
@@ -201,7 +216,15 @@ EOF
     cat <<EOF > "$BUILD_DIR/usr/bin/unilab-server"
 #!/bin/bash
 export LD_LIBRARY_PATH="/opt/unilab/python/lib:/opt/unilab/gui/lib:\$LD_LIBRARY_PATH"
-export PYTHONPATH=/opt/unilab
+
+# Add virtualenv site-packages to PYTHONPATH dynamically
+for site_pkg in /opt/unilab/venv/lib/python*/site-packages; do
+    if [ -d "\$site_pkg" ]; then
+        export PYTHONPATH="\$site_pkg:\$PYTHONPATH"
+    fi
+done
+export PYTHONPATH="/opt/unilab:\$PYTHONPATH"
+
 cd /opt/unilab/backend
 /opt/unilab/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker api.main:app --bind 0.0.0.0:8000
 EOF
@@ -218,7 +241,15 @@ EOF
     cat <<EOF > "$BUILD_DIR/usr/bin/unilab-core"
 #!/bin/bash
 export LD_LIBRARY_PATH="/opt/unilab/python/lib:/opt/unilab/gui/lib:\$LD_LIBRARY_PATH"
-export PYTHONPATH=/opt/unilab
+
+# Add virtualenv site-packages to PYTHONPATH dynamically
+for site_pkg in /opt/unilab/venv/lib/python*/site-packages; do
+    if [ -d "\$site_pkg" ]; then
+        export PYTHONPATH="\$site_pkg:\$PYTHONPATH"
+    fi
+done
+export PYTHONPATH="/opt/unilab:\$PYTHONPATH"
+
 /opt/unilab/venv/bin/python3 /opt/unilab/backend/UniLab.py "\$@"
 EOF
     chmod +x "$BUILD_DIR/usr/bin/unilab-core"
